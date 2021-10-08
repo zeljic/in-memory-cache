@@ -1,27 +1,34 @@
-use std::collections::VecDeque;
-use std::fmt::{Debug, Formatter};
+use std::{
+	collections::VecDeque,
+	fmt::{Debug, Formatter},
+};
+
+type Vu8 = Vec<u8>;
 
 #[derive(Clone)]
 pub struct Entry {
 	key: String,
-	value: Vec<u8>,
+	value: Vu8,
 }
 
 impl Entry {
-	pub fn new<T>(key: T, value: Vec<u8>) -> Self
+	pub fn new<T, V>(key: T, value: V) -> Self
 	where
 		T: Into<String>,
+		V: Into<Vu8>,
 	{
-		Self { key: key.into(), value }
-	}
-}
-
-impl<T: Into<String>, V: Into<Vec<u8>>> From<(T, V)> for Entry {
-	fn from((key, value): (T, V)) -> Self {
-		Entry {
+		Self {
 			key: key.into(),
 			value: value.into(),
 		}
+	}
+}
+
+impl<T: Into<String>, V: Into<Vu8>> From<(T, V)> for Entry {
+	fn from((key, value): (T, V)) -> Self {
+		let value = value.into();
+
+		Entry { key: key.into(), value }
 	}
 }
 
@@ -34,30 +41,101 @@ impl Debug for Entry {
 	}
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
+enum LimitType {
+	Capacity,
+	Size,
+}
+
 pub struct Cache {
 	items: VecDeque<Entry>,
-	capacity: usize,
+	limit_type: LimitType,
+	limit: usize,
+}
+
+impl Debug for Cache {
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		let mut debug_struct = f.debug_struct("Cache");
+
+		debug_struct
+			.field("items", &self.items.len())
+			.field("limit_type", &self.limit_type)
+			.field("limit", &self.limit);
+
+		match self.limit_type {
+			LimitType::Capacity => {
+				debug_struct.field("capacity", &self.len_capacity());
+			}
+			LimitType::Size => {
+				debug_struct.field("size", &self.len_size());
+			}
+		}
+
+		debug_struct.finish()
+	}
 }
 
 impl Cache {
-	pub fn new(capacity: usize) -> Self {
+	pub fn with_capacity(capacity: usize) -> Self {
 		Self {
 			items: VecDeque::with_capacity(capacity),
-			capacity,
+			limit_type: LimitType::Capacity,
+			limit: capacity,
 		}
 	}
 
-	pub fn add<T, V>(&mut self, key: T, value: V)
+	pub fn with_size(size: usize) -> Self {
+		Self {
+			items: VecDeque::new(),
+			limit_type: LimitType::Size,
+			limit: size,
+		}
+	}
+
+	pub fn with_size_kb(size: usize) -> Self {
+		Self::with_size(size * 1024)
+	}
+
+	pub fn with_size_mb(size: usize) -> Self {
+		Self::with_size_kb(size * 1024)
+	}
+
+	pub fn with_size_gb(size: usize) -> Self {
+		Self::with_size_mb(size * 1024)
+	}
+
+	pub fn add<T, V>(&mut self, key: T, value: V) -> anyhow::Result<()>
 	where
 		T: Into<String>,
-		V: Into<Vec<u8>>,
+		V: Into<Vu8>,
 	{
 		let key: String = key.into();
+		let value: Vu8 = value.into();
 
 		if !self.items.iter().any(|entry| entry.key == key) {
-			self.items.push_front(Entry::new(key, value.into()));
+			match self.limit_type {
+				LimitType::Capacity => {
+					let len = self.items.len();
+
+					if len == self.limit {
+						self.items.remove(len - 1);
+					}
+				}
+				LimitType::Size => {
+					if value.len() > self.limit {
+						return Err(anyhow::Error::msg("Overflow"));
+					}
+
+					while self.len_size() + value.len() > self.limit {
+						self.items.remove(self.items.len() - 1);
+					}
+				}
+			}
+
+			self.items.push_front(Entry::new(key, value));
 		}
+
+		Ok(())
 	}
 
 	pub fn get<T>(&mut self, key: T) -> Option<Entry>
@@ -67,24 +145,34 @@ impl Cache {
 		let key: String = key.into();
 
 		if let Some(position) = self.items.iter().position(|entry| entry.key == key) {
-			return if let Some(entry) = self.items.remove(position) {
-				self.items.push_front(entry.to_owned());
-
-				Some(entry)
+			if position == 0 {
+				if let Some(entry) = self.items.get(0) {
+					return Some(entry.to_owned());
+				}
 			} else {
-				None
-			};
+				return if let Some(entry) = self.items.remove(position) {
+					self.items.push_front(entry.to_owned());
+
+					Some(entry)
+				} else {
+					None
+				};
+			}
 		}
 
 		None
 	}
 
-	pub fn len(&self) -> usize {
+	pub fn clear(&mut self) {
+		self.items.clear();
+	}
+
+	fn len_capacity(&self) -> usize {
 		self.items.len()
 	}
 
-	pub fn is_empty(&self) -> bool {
-		self.len() == 0
+	fn len_size(&self) -> usize {
+		self.items.iter().fold(0_usize, |sum, entry| sum + entry.value.len())
 	}
 }
 
@@ -92,15 +180,20 @@ impl Cache {
 mod tests {
 	use crate::Cache;
 
+	fn populate(cache: &mut Cache, size: usize, prefix: &str) {
+		for i in 0..cache.limit {
+			let v = vec![1; size];
+
+			if let Ok(_) = cache.add(format!("{}{}", prefix, i), v) {}
+		}
+	}
+
 	#[test]
-	fn it_works() {
-		let mut cache = Cache::new(32);
+	fn simple() {
+		let mut cache = Cache::with_capacity(4);
 
-		cache.add("empty", vec![]);
-		cache.add("hi", String::from("zdravo svete").as_bytes().to_vec());
+		populate(&mut cache, 512, "key_");
 
-		cache.get("hi");
-
-		assert_eq!("hi", cache.items.get(0).unwrap().key);
+		assert_eq!("key_2", cache.items.get(1).unwrap().key);
 	}
 }

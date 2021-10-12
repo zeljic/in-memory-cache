@@ -3,19 +3,17 @@ use std::{
 	fmt::{Debug, Formatter},
 };
 
-type Vu8 = Vec<u8>;
-
 #[derive(Clone)]
 pub struct Entry {
 	key: String,
-	value: Vu8,
+	value: bytes::Bytes,
 }
 
 impl Entry {
 	pub fn new<T, V>(key: T, value: V) -> Self
 	where
 		T: Into<String>,
-		V: Into<Vu8>,
+		V: Into<bytes::Bytes>,
 	{
 		Self {
 			key: key.into(),
@@ -24,7 +22,7 @@ impl Entry {
 	}
 }
 
-impl<T: Into<String>, V: Into<Vu8>> From<(T, V)> for Entry {
+impl<T: Into<String>, V: Into<bytes::Bytes>> From<(T, V)> for Entry {
 	fn from((key, value): (T, V)) -> Self {
 		let value = value.into();
 
@@ -107,10 +105,10 @@ impl Cache {
 	pub fn add<T, V>(&mut self, key: T, value: V) -> anyhow::Result<()>
 	where
 		T: Into<String>,
-		V: Into<Vu8>,
+		V: Into<bytes::Bytes>,
 	{
 		let key: String = key.into();
-		let value: Vu8 = value.into();
+		let value: bytes::Bytes = value.into();
 
 		if !self.items.iter().any(|entry| entry.key == key) {
 			match self.limit_type {
@@ -149,14 +147,31 @@ impl Cache {
 				if let Some(entry) = self.items.get(0) {
 					return Some(entry.to_owned());
 				}
-			} else {
-				return if let Some(entry) = self.items.remove(position) {
-					self.items.push_front(entry.to_owned());
+			} else if let Some(entry) = self.items.remove(position) {
+				self.items.push_front(entry.to_owned());
 
-					Some(entry)
-				} else {
-					None
-				};
+				return Some(entry);
+			}
+		}
+
+		None
+	}
+
+	pub fn get_bytes<T>(&mut self, key: T) -> Option<bytes::Bytes>
+	where
+		T: Into<String>,
+	{
+		let key: String = key.into();
+
+		if let Some(position) = self.items.iter().position(|entry| entry.key == key) {
+			if position == 0 {
+				if let Some(entry) = self.items.get(0) {
+					return Some(entry.value.to_owned());
+				}
+			} else if let Some(entry) = self.items.remove(position) {
+				self.items.push_front(entry.to_owned());
+
+				return Some(entry.value);
 			}
 		}
 
@@ -184,7 +199,7 @@ mod tests {
 		for i in 0..cache.limit {
 			let v = vec![1; size];
 
-			if let Ok(_) = cache.add(format!("{}{}", prefix, i), v) {}
+			if cache.add(format!("{}{}", prefix, i), v).is_ok() {}
 		}
 	}
 

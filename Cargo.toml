@@ -6,3 +6,9 @@ authors = ["Djordje Zeljic <zeljic@gmail.com>"]
 
 [dependencies.anyhow]
 version = "1"
+
+[dependencies.bytes]
+version = "1.1"
+
+[profile.release]
+lto = true

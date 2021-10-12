@@ -2,7 +2,7 @@
 name = "in-memory-cache"
 version = "0.1.0"
 edition = "2018"
-authors = ["Djordje Zeljic <zeljic@gmail.com>"]
+authors = ["Đorđe Zeljić <zeljic@gmail.com>"]
 
 [dependencies.anyhow]
 version = "1"

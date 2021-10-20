@@ -195,8 +195,8 @@ impl Cache {
 mod tests {
 	use crate::Cache;
 
-	fn populate(cache: &mut Cache, size: usize, prefix: &str) {
-		for i in 0..cache.limit {
+	fn populate(cache: &mut Cache, limit: usize, size: usize, prefix: &str) {
+		for i in 0..limit {
 			let v = vec![1; size];
 
 			if cache.add(format!("{}{}", prefix, i), v).is_ok() {}
@@ -204,11 +204,74 @@ mod tests {
 	}
 
 	#[test]
-	fn simple() {
+	fn with_capacity_by_key() {
 		let mut cache = Cache::with_capacity(4);
 
-		populate(&mut cache, 512, "key_");
+		populate(&mut cache, 4, 1, "key-");
 
-		assert_eq!("key_2", cache.items.get(1).unwrap().key);
+		assert_eq!("key-3", cache.items.get(0).unwrap().key);
+		assert_eq!("key-0", cache.items.get(3).unwrap().key);
+	}
+
+	#[test]
+	fn with_capacity_basic_operations() {
+		let mut cache = Cache::with_capacity(4);
+
+		populate(&mut cache, 4, 1, "key-");
+
+		assert_eq!(
+			vec!["key-3", "key-2", "key-1", "key-0"]
+				.iter()
+				.map(|v| String::from(*v))
+				.collect::<Vec<String>>(),
+			cache.items.iter().map(|v| v.key.to_owned()).collect::<Vec<String>>()
+		);
+
+		cache.get("key-0");
+
+		assert_eq!(
+			vec!["key-0", "key-3", "key-2", "key-1"]
+				.iter()
+				.map(|v| String::from(*v))
+				.collect::<Vec<String>>(),
+			cache.items.iter().map(|v| v.key.to_owned()).collect::<Vec<String>>()
+		);
+
+		cache.get("key-2");
+
+		assert_eq!(
+			vec!["key-2", "key-0", "key-3", "key-1"]
+				.iter()
+				.map(|v| String::from(*v))
+				.collect::<Vec<String>>(),
+			cache.items.iter().map(|v| v.key.to_owned()).collect::<Vec<String>>()
+		);
+
+		if let Err(e) = cache.add("key-added", vec![1, 1]) {
+			eprintln!("{:?}", e);
+		}
+
+		assert_eq!(
+			vec!["key-added", "key-2", "key-0", "key-3"]
+				.iter()
+				.map(|v| String::from(*v))
+				.collect::<Vec<String>>(),
+			cache.items.iter().map(|v| v.key.to_owned()).collect::<Vec<String>>()
+		);
+	}
+
+	#[test]
+	fn clear() {
+		let mut cache = Cache::with_capacity(4);
+
+		assert_eq!(cache.items.len(), 0);
+
+		populate(&mut cache, 4, 4, "key-");
+
+		assert_eq!(cache.items.len(), 4);
+
+		cache.clear();
+
+		assert_eq!(cache.items.len(), 0);
 	}
 }

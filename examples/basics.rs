@@ -1,74 +1,146 @@
 extern crate in_memory_cache;
 
-use std::ops::Div;
-use std::time::Instant;
+use in_memory_cache::Cache;
 
-const KEY: &str = "/hi/zdravo/svete/";
+use std::{
+	ops::{Div, Range},
+	time::Instant,
+};
 
-fn bench_with_size_n_items(size: usize, items: usize, read: usize) {
-	let source = vec![1; size];
+static KEY_PREFIX: &str = "/few/levels/deep/key-";
 
-	let mut cache = in_memory_cache::Cache::with_size(size * items);
+fn populate(cache: &mut Cache, items: usize, data_size: usize, prefix: &str) {
+	for idx in 0..items {
+		if cache.add(format!("{}-{}", prefix, idx), vec![1; data_size]).is_ok() {}
+	}
+}
 
-	println!("# ===");
-	println!("Benchmark");
-	println!("Entry size {} bytes", size);
-	println!("Number of items {}", items);
-	println!("Read element index {}", read);
-	println!("# ===");
+enum TYPE {
+	Capacity,
+	Size,
+}
+
+fn perf_add_read(t: TYPE, value: usize, data_size: usize, range: Range<usize>) {
+	let mut cache = match t {
+		TYPE::Capacity => Cache::with_capacity(value),
+		TYPE::Size => Cache::with_size(value * data_size),
+	};
+
+	populate(&mut cache, value, data_size, KEY_PREFIX);
+
+	let format_range = format!("{:?}", &range);
+	let range_len = range.len() as u32;
+
+	let rev = range.to_owned().rev();
+	let rev_len = rev.len() as u32;
 
 	let start = Instant::now();
 
-	for i in 0..items {
-		if let Err(e) = cache.add(format!("{}-{}", KEY, i), source.clone()) {
-			println!("{:?}", e);
-		}
+	for idx in range {
+		if cache.get(format!("{}{}", KEY_PREFIX, idx)).is_some() {}
 	}
-	println!("Add: {:?}", Instant::now().duration_since(start).div(items as u32));
+
+	let duration_until = Instant::now().duration_since(start);
+
+	println!(
+		"{:10}   {:10}   {:10}   {:10}   {:32}",
+		value,
+		data_size,
+		format!("{:?}", duration_until),
+		format!("{:?}", duration_until.div(range_len)),
+		format_range
+	);
+
+	//
+
+	let mut cache = match t {
+		TYPE::Capacity => Cache::with_capacity(value),
+		TYPE::Size => Cache::with_size(value * data_size),
+	};
+
+	populate(&mut cache, value, data_size, KEY_PREFIX);
+
+	let format_range = format!("{:?}", &rev);
 
 	let start = Instant::now();
 
-	for _ in 0..items {
-		cache.get(format!("{}-{}", KEY, read));
+	for idx in rev {
+		if cache.get(format!("{}{}", KEY_PREFIX, idx)).is_some() {}
 	}
 
-	println!("Read: {:?}", Instant::now().duration_since(start).div(items as u32));
-	println!("# ===");
+	let duration_until = Instant::now().duration_since(start);
+
+	println!(
+		"{:10}   {:10}   {:10}   {:10}   {:32}",
+		value,
+		data_size,
+		format!("{:?}", duration_until),
+		format!("{:?}", duration_until.div(rev_len)),
+		format_range
+	);
 }
 
 fn main() {
-	let sizes = vec![
-		1024,
-		4 * 1024,
-		16 * 1024,
-		256 * 1024,
-		1024 * 1024,
-		4 * 1024 * 1024,
-		16 * 1024 * 1024,
-	];
+	println!("# TYPE: CAPACITY");
+	println!(
+		"{:10}   {:10}   {:10}   {:10}   {:32}",
+		"ITEMS", "SIZE", "SUM", "AVERAGE", "RANGE"
+	);
 
-	sizes.iter().for_each(|source| {
-		bench_with_size_n_items(*source, 1, 0);
-		println!();
-	});
+	perf_add_read(TYPE::Capacity, 64, 256 * 1024, 0..63);
+	perf_add_read(TYPE::Capacity, 64, 256 * 1024, 26..36);
 
-	sizes.iter().for_each(|source| {
-		bench_with_size_n_items(*source, 4, 1);
-		println!();
-	});
+	println!();
 
-	sizes.iter().for_each(|source| {
-		bench_with_size_n_items(*source, 4, 3);
-		println!();
-	});
+	perf_add_read(TYPE::Capacity, 64, 1024 * 1024, 0..63);
+	perf_add_read(TYPE::Capacity, 64, 1024 * 1024, 26..36);
 
-	sizes.iter().for_each(|source| {
-		bench_with_size_n_items(*source, 64, 31);
-		println!();
-	});
+	println!();
 
-	sizes.iter().for_each(|source| {
-		bench_with_size_n_items(*source, 64, 63);
-		println!();
-	});
+	perf_add_read(TYPE::Capacity, 64, 2 * 1024 * 1024, 0..63);
+	perf_add_read(TYPE::Capacity, 64, 2 * 1024 * 1024, 26..36);
+
+	println!();
+
+	perf_add_read(TYPE::Capacity, 64, 4 * 1024 * 1024, 0..63);
+	perf_add_read(TYPE::Capacity, 64, 4 * 1024 * 1024, 26..36);
+
+	println!();
+
+	perf_add_read(TYPE::Capacity, 64, 8 * 1024 * 1024, 0..63);
+	perf_add_read(TYPE::Capacity, 64, 8 * 1024 * 1024, 26..36);
+
+	///////////////////////////////////////////////////////////
+
+	println!();
+	println!();
+
+	println!("# TYPE: SIZE");
+	println!(
+		"{:10}   {:10}   {:10}   {:10}   {:32}",
+		"ITEMS", "SIZE", "SUM", "AVERAGE", "RANGE"
+	);
+
+	perf_add_read(TYPE::Size, 64, 256 * 1024, 0..63);
+	perf_add_read(TYPE::Size, 64, 256 * 1024, 26..36);
+
+	println!();
+
+	perf_add_read(TYPE::Size, 64, 1024 * 1024, 0..63);
+	perf_add_read(TYPE::Size, 64, 1024 * 1024, 26..36);
+
+	println!();
+
+	perf_add_read(TYPE::Size, 64, 2 * 1024 * 1024, 0..63);
+	perf_add_read(TYPE::Size, 64, 2 * 1024 * 1024, 26..36);
+
+	println!();
+
+	perf_add_read(TYPE::Size, 64, 4 * 1024 * 1024, 0..63);
+	perf_add_read(TYPE::Size, 64, 4 * 1024 * 1024, 26..36);
+
+	println!();
+
+	perf_add_read(TYPE::Size, 64, 8 * 1024 * 1024, 0..63);
+	perf_add_read(TYPE::Size, 64, 8 * 1024 * 1024, 26..36);
 }

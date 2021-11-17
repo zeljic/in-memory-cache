@@ -1,12 +1,9 @@
 [package]
 name = "in-memory-cache"
 description = "Basic implementation of in memory cache library"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Đorđe Zeljić <zeljic@gmail.com>"]
-
-[dependencies.anyhow]
-version = "1"
 
 [dependencies.bytes]
 version = "1.1"

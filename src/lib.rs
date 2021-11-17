@@ -1,7 +1,19 @@
+use std::fmt::Display;
 use std::{
 	collections::VecDeque,
 	fmt::{Debug, Formatter},
 };
+
+#[derive(Debug, Clone)]
+pub struct Error(String);
+
+impl Display for Error {
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.0)
+	}
+}
+
+impl std::error::Error for Error {}
 
 #[derive(Clone)]
 pub struct Entry {
@@ -102,7 +114,7 @@ impl Cache {
 		Self::with_size_mb(size * 1024)
 	}
 
-	pub fn add<T, V>(&mut self, key: T, value: V) -> anyhow::Result<()>
+	pub fn add<T, V>(&mut self, key: T, value: V) -> std::result::Result<(), Box<dyn std::error::Error>>
 	where
 		T: Into<String>,
 		V: Into<bytes::Bytes>,
@@ -121,7 +133,7 @@ impl Cache {
 				}
 				LimitType::Size => {
 					if value.len() > self.limit {
-						return Err(anyhow::Error::msg("Overflow"));
+						return Err(Error(format!("Content is too big: {} > {}", value.len(), self.limit)).into());
 					}
 
 					while self.len_size() + value.len() > self.limit {
@@ -273,5 +285,15 @@ mod tests {
 		cache.clear();
 
 		assert_eq!(cache.items.len(), 0);
+	}
+
+	#[test]
+	fn overflow() {
+		let mut cache = Cache::with_size_kb(4);
+
+		if cache.add("/1", vec![1; 2048]).is_ok() {}
+		if cache.add("/2", vec![1; 2048]).is_ok() {}
+
+		assert!(cache.add("/3", vec![1; 4097]).is_err());
 	}
 }

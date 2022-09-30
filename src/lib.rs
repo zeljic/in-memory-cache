@@ -1,7 +1,6 @@
-use std::fmt::Display;
 use std::{
 	collections::VecDeque,
-	fmt::{Debug, Formatter},
+	fmt::{Debug, Display, Formatter},
 };
 
 #[derive(Debug, Clone)]
@@ -114,7 +113,7 @@ impl Cache {
 		Self::with_size_mb(size * 1024)
 	}
 
-	pub fn add<T, V>(&mut self, key: T, value: V) -> std::result::Result<(), Box<dyn std::error::Error>>
+	pub fn add<T, V>(&mut self, key: T, value: V) -> Result<(), Box<dyn std::error::Error>>
 	where
 		T: Into<String>,
 		V: Into<bytes::Bytes>,

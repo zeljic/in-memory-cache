@@ -7,7 +7,7 @@ use std::{
 	time::Instant,
 };
 
-static KEY_PREFIX: &str = "/few/levels/deep/key-";
+static KEY_PREFIX: &str = "few:levels:deep:key-";
 
 fn populate(cache: &mut Cache, items: usize, data_size: usize, prefix: &str) {
 	for idx in 0..items {

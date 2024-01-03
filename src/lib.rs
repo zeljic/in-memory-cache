@@ -14,7 +14,6 @@ impl Display for Error {
 
 impl std::error::Error for Error {}
 
-#[derive(Clone)]
 pub struct Entry {
 	key: String,
 	value: bytes::Bytes,
@@ -147,46 +146,30 @@ impl Cache {
 		Ok(())
 	}
 
-	pub fn get<T>(&mut self, key: T) -> Option<Entry>
+	pub fn get<T>(&mut self, key: T) -> Option<&Entry>
 	where
 		T: Into<String>,
 	{
 		let key: String = key.into();
 
 		if let Some(position) = self.items.iter().position(|entry| entry.key == key) {
-			if position == 0 {
-				if let Some(entry) = self.items.get(0) {
-					return Some(entry.to_owned());
+			if position != 0 {
+				if let Some(entry) = self.items.remove(position) {
+					self.items.push_front(entry);
 				}
-			} else if let Some(entry) = self.items.remove(position) {
-				self.items.push_front(entry.to_owned());
-
-				return Some(entry);
 			}
+
+			return self.items.front();
 		}
 
 		None
 	}
 
-	pub fn get_bytes<T>(&mut self, key: T) -> Option<bytes::Bytes>
+	pub fn get_bytes<T>(&mut self, key: T) -> Option<&bytes::Bytes>
 	where
 		T: Into<String>,
 	{
-		let key: String = key.into();
-
-		if let Some(position) = self.items.iter().position(|entry| entry.key == key) {
-			if position == 0 {
-				if let Some(entry) = self.items.get(0) {
-					return Some(entry.value.to_owned());
-				}
-			} else if let Some(entry) = self.items.remove(position) {
-				self.items.push_front(entry.to_owned());
-
-				return Some(entry.value);
-			}
-		}
-
-		None
+		self.get(key).map(|entry| &entry.value)
 	}
 
 	pub fn clear(&mut self) {

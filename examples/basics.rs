@@ -15,15 +15,15 @@ fn populate(cache: &mut Cache, items: usize, data_size: usize, prefix: &str) {
 	}
 }
 
-enum TYPE {
+enum Type {
 	Capacity,
 	Size,
 }
 
-fn perf_add_read(t: TYPE, value: usize, data_size: usize, range: Range<usize>) {
+fn perf_add_read(t: Type, value: usize, data_size: usize, range: Range<usize>) {
 	let mut cache = match t {
-		TYPE::Capacity => Cache::with_capacity(value),
-		TYPE::Size => Cache::with_size(value * data_size),
+		Type::Capacity => Cache::with_capacity(value),
+		Type::Size => Cache::with_size(value * data_size),
 	};
 
 	populate(&mut cache, value, data_size, KEY_PREFIX);
@@ -54,8 +54,8 @@ fn perf_add_read(t: TYPE, value: usize, data_size: usize, range: Range<usize>) {
 	//
 
 	let mut cache = match t {
-		TYPE::Capacity => Cache::with_capacity(value),
-		TYPE::Size => Cache::with_size(value * data_size),
+		Type::Capacity => Cache::with_capacity(value),
+		Type::Size => Cache::with_size(value * data_size),
 	};
 
 	populate(&mut cache, value, data_size, KEY_PREFIX);
@@ -87,28 +87,28 @@ fn main() {
 		"ITEMS", "SIZE", "SUM", "AVERAGE", "RANGE"
 	);
 
-	perf_add_read(TYPE::Capacity, 64, 256 * 1024, 0..63);
-	perf_add_read(TYPE::Capacity, 64, 256 * 1024, 26..36);
+	perf_add_read(Type::Capacity, 64, 256 * 1024, 0..63);
+	perf_add_read(Type::Capacity, 64, 256 * 1024, 26..36);
 
 	println!();
 
-	perf_add_read(TYPE::Capacity, 64, 1024 * 1024, 0..63);
-	perf_add_read(TYPE::Capacity, 64, 1024 * 1024, 26..36);
+	perf_add_read(Type::Capacity, 64, 1024 * 1024, 0..63);
+	perf_add_read(Type::Capacity, 64, 1024 * 1024, 26..36);
 
 	println!();
 
-	perf_add_read(TYPE::Capacity, 64, 2 * 1024 * 1024, 0..63);
-	perf_add_read(TYPE::Capacity, 64, 2 * 1024 * 1024, 26..36);
+	perf_add_read(Type::Capacity, 64, 2 * 1024 * 1024, 0..63);
+	perf_add_read(Type::Capacity, 64, 2 * 1024 * 1024, 26..36);
 
 	println!();
 
-	perf_add_read(TYPE::Capacity, 64, 4 * 1024 * 1024, 0..63);
-	perf_add_read(TYPE::Capacity, 64, 4 * 1024 * 1024, 26..36);
+	perf_add_read(Type::Capacity, 64, 4 * 1024 * 1024, 0..63);
+	perf_add_read(Type::Capacity, 64, 4 * 1024 * 1024, 26..36);
 
 	println!();
 
-	perf_add_read(TYPE::Capacity, 64, 8 * 1024 * 1024, 0..63);
-	perf_add_read(TYPE::Capacity, 64, 8 * 1024 * 1024, 26..36);
+	perf_add_read(Type::Capacity, 64, 8 * 1024 * 1024, 0..63);
+	perf_add_read(Type::Capacity, 64, 8 * 1024 * 1024, 26..36);
 
 	///////////////////////////////////////////////////////////
 
@@ -121,26 +121,26 @@ fn main() {
 		"ITEMS", "SIZE", "SUM", "AVERAGE", "RANGE"
 	);
 
-	perf_add_read(TYPE::Size, 64, 256 * 1024, 0..63);
-	perf_add_read(TYPE::Size, 64, 256 * 1024, 26..36);
+	perf_add_read(Type::Size, 64, 256 * 1024, 0..63);
+	perf_add_read(Type::Size, 64, 256 * 1024, 26..36);
 
 	println!();
 
-	perf_add_read(TYPE::Size, 64, 1024 * 1024, 0..63);
-	perf_add_read(TYPE::Size, 64, 1024 * 1024, 26..36);
+	perf_add_read(Type::Size, 64, 1024 * 1024, 0..63);
+	perf_add_read(Type::Size, 64, 1024 * 1024, 26..36);
 
 	println!();
 
-	perf_add_read(TYPE::Size, 64, 2 * 1024 * 1024, 0..63);
-	perf_add_read(TYPE::Size, 64, 2 * 1024 * 1024, 26..36);
+	perf_add_read(Type::Size, 64, 2 * 1024 * 1024, 0..63);
+	perf_add_read(Type::Size, 64, 2 * 1024 * 1024, 26..36);
 
 	println!();
 
-	perf_add_read(TYPE::Size, 64, 4 * 1024 * 1024, 0..63);
-	perf_add_read(TYPE::Size, 64, 4 * 1024 * 1024, 26..36);
+	perf_add_read(Type::Size, 64, 4 * 1024 * 1024, 0..63);
+	perf_add_read(Type::Size, 64, 4 * 1024 * 1024, 26..36);
 
 	println!();
 
-	perf_add_read(TYPE::Size, 64, 8 * 1024 * 1024, 0..63);
-	perf_add_read(TYPE::Size, 64, 8 * 1024 * 1024, 26..36);
+	perf_add_read(Type::Size, 64, 8 * 1024 * 1024, 0..63);
+	perf_add_read(Type::Size, 64, 8 * 1024 * 1024, 26..36);
 }

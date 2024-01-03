@@ -14,6 +14,7 @@ impl Display for Error {
 
 impl std::error::Error for Error {}
 
+#[derive(Clone)]
 pub struct Entry {
 	key: String,
 	value: bytes::Bytes,
@@ -131,7 +132,11 @@ impl Cache {
 				}
 				LimitType::Size => {
 					if value.len() > self.limit {
-						return Err(Error(format!("Content is too big: {} > {}", value.len(), self.limit)).into());
+						return Err(Box::new(Error(format!(
+							"Value size ({}) is greater than limit ({})",
+							value.len(),
+							self.limit
+						))));
 					}
 
 					while self.len_size() + value.len() > self.limit {
@@ -203,7 +208,7 @@ mod tests {
 
 		populate(&mut cache, 4, 1, "key-");
 
-		assert_eq!("key-3", cache.items.get(0).unwrap().key);
+		assert_eq!("key-3", cache.items.front().unwrap().key);
 		assert_eq!("key-0", cache.items.get(3).unwrap().key);
 	}
 
@@ -214,7 +219,7 @@ mod tests {
 		populate(&mut cache, 4, 1, "key-");
 
 		assert_eq!(
-			vec!["key-3", "key-2", "key-1", "key-0"]
+			["key-3", "key-2", "key-1", "key-0"]
 				.iter()
 				.map(|v| String::from(*v))
 				.collect::<Vec<String>>(),
@@ -224,7 +229,7 @@ mod tests {
 		cache.get("key-0");
 
 		assert_eq!(
-			vec!["key-0", "key-3", "key-2", "key-1"]
+			["key-0", "key-3", "key-2", "key-1"]
 				.iter()
 				.map(|v| String::from(*v))
 				.collect::<Vec<String>>(),
@@ -234,7 +239,7 @@ mod tests {
 		cache.get("key-2");
 
 		assert_eq!(
-			vec!["key-2", "key-0", "key-3", "key-1"]
+			["key-2", "key-0", "key-3", "key-1"]
 				.iter()
 				.map(|v| String::from(*v))
 				.collect::<Vec<String>>(),
@@ -246,7 +251,7 @@ mod tests {
 		}
 
 		assert_eq!(
-			vec!["key-added", "key-2", "key-0", "key-3"]
+			["key-added", "key-2", "key-0", "key-3"]
 				.iter()
 				.map(|v| String::from(*v))
 				.collect::<Vec<String>>(),
@@ -273,8 +278,8 @@ mod tests {
 	fn overflow() {
 		let mut cache = Cache::with_size_kb(4);
 
-		if cache.add("/1", vec![1; 2048]).is_ok() {}
-		if cache.add("/2", vec![1; 2048]).is_ok() {}
+		let _ = cache.add("/1", vec![1; 2048]).is_ok();
+		let _ = cache.add("/2", vec![1; 2048]).is_ok();
 
 		assert!(cache.add("/3", vec![1; 4097]).is_err());
 	}

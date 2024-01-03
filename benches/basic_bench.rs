@@ -1,8 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use in_memory_cache::Cache;
 
-const CACHE_SIZE: usize = 1024;
-
 pub fn populate(cache: &mut Cache, n: usize, size: usize) {
 	for i in 0..n {
 		if cache.add(format!("key-{}", i), vec![1; size]).is_ok() {}
@@ -32,7 +30,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 		populate(&mut cache, n as usize, 1024);
 
 		b.iter(|| {
-			if cache.get(format!("key-{}", idx)).is_some() {}
+			let _ = cache.get(format!("key-{}", idx)).is_some();
 
 			if idx == end_range {
 				idx = start_range;
@@ -54,7 +52,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 		populate(&mut cache, n as usize, 1024);
 
 		b.iter(|| {
-			if cache.get_bytes(format!("key-{}", idx)).is_some() {}
+			let _ = cache.get_bytes(format!("key-{}", idx)).is_some();
 
 			if idx == end_range {
 				idx = start_range;
@@ -76,7 +74,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 		populate(&mut cache, n as usize, 1024);
 
 		b.iter(|| {
-			if cache.get_bytes(format!("key-{}", idx)).is_some() {}
+			let _ = cache.get_bytes(format!("key-{}", idx)).is_some();
 
 			if idx == end_range {
 				idx = start_range;
@@ -98,7 +96,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 		populate(&mut cache, n as usize, 1024);
 
 		b.iter(|| {
-			if cache.get_bytes(format!("key-{}", idx)).is_some() {}
+			let _ = cache.get_bytes(format!("key-{}", idx)).is_some();
 
 			if idx == end_range {
 				idx = start_range;
